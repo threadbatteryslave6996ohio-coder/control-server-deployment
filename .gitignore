@@ -1,0 +1,5 @@
+.env
+prometheus/targets/*.local.yml
+grafana-data/
+prometheus-data/
+loki-data/
