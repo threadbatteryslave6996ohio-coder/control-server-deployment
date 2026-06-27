@@ -6,11 +6,6 @@ global:
     cluster: control-server
     role: monitoring
 
-storage:
-  tsdb:
-    retention:
-      time: 15d
-
 scrape_configs:
   - job_name: prometheus
     static_configs:

@@ -4,7 +4,7 @@ ENV_FILE ?= .env
 TARGETS_DIR ?= prometheus/targets
 TARGETS_FILE ?= $(TARGETS_DIR)/managed-hosts.yml
 
-.PHONY: help init bootstrap up up-grafana down restart ps logs status config validate targets
+.PHONY: help init bootstrap up up-grafana down restart ps logs access-logs status config validate targets
 
 help:
 	@printf '%s\n' \
@@ -17,6 +17,7 @@ help:
 		'  restart       Restart the stack' \
 		'  ps            Show running services' \
 		'  logs          Follow service logs' \
+		'  access-logs   Follow reverse-proxy access logs' \
 		'  status        Show service status' \
 		'  config        Render the effective compose config' \
 		'  validate      Check compose config and file layout' \
@@ -50,6 +51,9 @@ ps:
 logs:
 	$(COMPOSE) --project-name "$(STACK_NAME)" logs -f
 
+access-logs:
+	$(COMPOSE) --project-name "$(STACK_NAME)" logs -f proxy
+
 status:
 	$(COMPOSE) --project-name "$(STACK_NAME)" ps
 
@@ -60,6 +64,7 @@ validate:
 	@test -f docker-compose.yml
 	@test -f prometheus/prometheus.yml
 	@test -f loki/loki-config.yaml
+	@test -f nginx/nginx.conf
 	@$(COMPOSE) --project-name "$(STACK_NAME)" config >/dev/null
 
 targets:
