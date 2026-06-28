@@ -8,6 +8,7 @@ This repository contains the control-server side of the deployment.
 - Prometheus in Docker for node exporter scraping
 - Loki in Docker for log ingestion
 - Optional Grafana in Docker for dashboards
+- Splunk Enterprise in Docker for log search and HEC ingestion
 - Nginx reverse proxy with structured access logging
 
 Managed hosts are configured separately with the client-side playbook. This repo only provides the central services that run on the control server.
@@ -15,20 +16,20 @@ Managed hosts are configured separately with the client-side playbook. This repo
 ## Layout
 
 - `Makefile` - convenience commands for the control-server stack
-- `docker-compose.yml` - Prometheus, Loki, and optional Grafana
+- `docker-compose.yml` - Prometheus, Loki, Splunk, and optional Grafana
 - `prometheus/prometheus.yml` - Prometheus scrape configuration
 - `prometheus/targets/managed-hosts.yml.example` - example scrape targets for managed hosts
 - `loki/loki-config.yaml` - Loki single-node config
 - `grafana/provisioning/datasources/datasources.yml` - Grafana datasource provisioning
 - `nginx/nginx.conf` - path routing and JSON access-log configuration
-- `.env.example` - optional environment overrides for Grafana
+- `.env.example` - optional environment overrides for Grafana and Splunk
 
 ## Prerequisites
 
 - Docker Engine and Docker Compose plugin on the control-server host
 - A working Tailscale installation on the control-server host
 - Managed hosts already running `node_exporter` on port `9100`
-- Optional: a pre-existing Splunk HEC endpoint for security logs
+- A Splunk admin password and HEC token for the local container
 
 ## Recommended settings
 
@@ -37,6 +38,7 @@ Managed hosts are configured separately with the client-side playbook. This repo
 - Use `30d` Loki retention for a small control-server deployment, then adjust once you know your log volume.
 - Leave Grafana disabled unless you actually need dashboards; it is optional for the core monitoring stack.
 - Keep Loki unauthenticated only when it is private to the tailnet or otherwise access-controlled.
+- Keep Splunk reachable only through the proxy and the HEC port you intend to expose.
 
 ## Quick start
 
@@ -72,25 +74,27 @@ Managed hosts are configured separately with the client-side playbook. This repo
 
    If you want to override the default Grafana credentials, copy `.env.example` to `.env` and change the values before starting the stack. Set `GRAFANA_ROOT_URL` to the public proxy URL when accessing Grafana from another host.
 
-   The `.env.example` file only covers Grafana credentials. Adjust `prometheus/prometheus.yml` or `loki/loki-config.yaml` directly if you want to change retention or scrape behavior.
+   The `.env.example` file covers Grafana and Splunk credentials. Adjust `prometheus/prometheus.yml` or `loki/loki-config.yaml` directly if you want to change retention or scrape behavior.
 
 ## Reverse proxy and service endpoints
 
 Only the reverse proxy publishes a host port. Prometheus, Loki, and Grafana are reachable only on the internal Compose network.
 
-- Prometheus: `http://<proxy-host>:8080/prometheus/`
-- Loki API: `http://<proxy-host>:8080/loki/api/v1/...`
-- Loki readiness: `http://<proxy-host>:8080/loki/ready`
-- Grafana: `http://<proxy-host>:8080/grafana/` when enabled
+- Prometheus: `http://<proxy-host>/prometheus/`
+- Loki API: `http://<proxy-host>/loki/api/v1/...`
+- Loki readiness: `http://<proxy-host>/loki/ready`
+- Grafana: `http://<proxy-host>/grafana/` when enabled
+- Splunk Web: `http://<proxy-host>/splunk/`
+- Splunk HEC: `https://<proxy-host>:8088/`
 
-The proxy binds to `127.0.0.1:8080` by default. To expose it only on Tailscale, set `PROXY_BIND_ADDRESS` in `.env` to the control server's Tailscale IPv4 address, set `GRAFANA_ROOT_URL` to the corresponding URL, and restart the stack. Do not set the bind address to `0.0.0.0` unless the host firewall restricts access appropriately.
+The proxy binds to `0.0.0.0:80` by default. To expose it only on Tailscale, set `PROXY_BIND_ADDRESS` in `.env` to the control server's Tailscale IPv4 address, set `GRAFANA_ROOT_URL` to the corresponding URL, and restart the stack. Do not keep the bind address on `0.0.0.0` unless the host firewall restricts access appropriately.
 
 Example:
 
 ```dotenv
 PROXY_BIND_ADDRESS=100.64.0.10
-PROXY_PORT=8080
-GRAFANA_ROOT_URL=http://100.64.0.10:8080/grafana/
+PROXY_PORT=80
+GRAFANA_ROOT_URL=http://100.64.0.10/grafana/
 ```
 
 ## Access logs
@@ -142,11 +146,12 @@ Common commands:
 - Confirm the Prometheus target list in the UI shows each managed host as `UP`.
 - Confirm `/prometheus/` and `/loki/ready` are reachable through the proxy.
 - Confirm Grafana can reach both Prometheus and Loki when the optional profile is enabled.
+- Confirm Splunk Web loads through the proxy and HEC is listening on `8088`.
 - Confirm Tailscale is active on the control-server host.
 - Confirm Prometheus retention and Loki retention match the storage policy you want before putting the box into service.
 
 ## Notes
 
-- Splunk HEC is external to this repo.
+- Splunk is deployed as a local container in this stack.
 - This repo does not install `tailscale`, `auditd`, `osquery`, `fluent-bit`, or `docker` on managed hosts.
 - The Prometheus and Loki data directories are persisted in Docker volumes.

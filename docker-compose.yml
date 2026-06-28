@@ -34,11 +34,26 @@ services:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:8080/grafana/}
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost/grafana/}
       GF_SERVER_SERVE_FROM_SUB_PATH: "true"
     volumes:
       - grafana-data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    restart: unless-stopped
+
+  splunk:
+    image: splunk/splunk:latest
+    container_name: splunk
+    environment:
+      SPLUNK_GENERAL_TERMS: ${SPLUNK_GENERAL_TERMS:---accept-sgt-current-at-splunk-com}
+      SPLUNK_START_ARGS: --accept-license
+      SPLUNK_PASSWORD: ${SPLUNK_PASSWORD:?set SPLUNK_PASSWORD in .env}
+      SPLUNK_HEC_TOKEN: ${SPLUNK_HEC_TOKEN:?set SPLUNK_HEC_TOKEN in .env}
+      SPLUNK_HEC_PORT: ${SPLUNK_HEC_PORT:-8088}
+    ports:
+      - "${SPLUNK_BIND_ADDRESS:-0.0.0.0}:${SPLUNK_HEC_PORT:-8088}:8088"
+    volumes:
+      - splunk-data:/opt/splunk/var
     restart: unless-stopped
 
   proxy:
@@ -47,8 +62,9 @@ services:
     depends_on:
       - prometheus
       - loki
+      - splunk
     ports:
-      - "${PROXY_BIND_ADDRESS:-127.0.0.1}:${PROXY_PORT:-8080}:80"
+      - "${PROXY_BIND_ADDRESS:-0.0.0.0}:${PROXY_PORT:-80}:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     logging:
@@ -67,3 +83,4 @@ volumes:
   prometheus-data:
   loki-data:
   grafana-data:
+  splunk-data:
