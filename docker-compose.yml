@@ -55,6 +55,7 @@ services:
     # No published ports: HEC and the web UI are reached through the proxy on
     # the single ingress port. See README, "Single ingress".
     volumes:
+      - ./splunk/default.yml:/tmp/defaults/default.yml:ro
       - splunk-data:/opt/splunk/var
     restart: unless-stopped
 

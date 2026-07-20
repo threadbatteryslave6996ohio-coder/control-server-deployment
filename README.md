@@ -114,6 +114,29 @@ plain HTTP to the proxy, and Tailscale provides transport encryption.
 If this stack is ever exposed beyond a trusted network, that assumption breaks
 and TLS has to be terminated at the proxy.
 
+### Splunk index provisioning
+
+Indexes are declared in `splunk/default.yml`, which is mounted at
+`/tmp/defaults/default.yml` and applied by the image's entrypoint on every
+start. Do not create indexes by hand with `splunk add index` — that state is
+not reproducible and will not survive a rebuild.
+
+This matters because the two halves of an index live in different places:
+
+| | Path | Persistence |
+| --- | --- | --- |
+| Index data | `/opt/splunk/var` | `splunk-data` named volume — survives |
+| Index definitions | `/opt/splunk/etc` | anonymous volume — **can be dropped** |
+
+A HEC push to an index that does not exist still returns
+`{"text":"Success","code":0}` while the event is silently discarded. So a lost
+definition looks exactly like a working pipeline until you go looking for the
+data. Declaring indexes in `default.yml` makes them reappear on every container
+start regardless of what happened to `/opt/splunk/etc`.
+
+Adding an index means adding an entry to `splunk/default.yml` and restarting
+the container.
+
 ### Bind address
 
 The proxy binds to `0.0.0.0:80` by default, which is intentional on a private

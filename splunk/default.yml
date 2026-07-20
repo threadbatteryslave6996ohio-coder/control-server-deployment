@@ -1,0 +1,19 @@
+# Splunk provisioning, applied by the image's entrypoint on every start.
+#
+# Index definitions live here rather than being created by hand with
+# `splunk add index`. Index *data* is persisted on the splunk-data volume
+# (/opt/splunk/var), but index *definitions* live in /opt/splunk/etc, which is
+# an anonymous volume — recreating the container can drop them. A HEC push to
+# a missing index still returns {"text":"Success","code":0} while the event is
+# discarded, so a lost definition is silent data loss.
+---
+splunk:
+  conf:
+    - key: indexes
+      value:
+        directory: /opt/splunk/etc/apps/control_indexes/local
+        content:
+          security:
+            homePath: $SPLUNK_DB/security/db
+            coldPath: $SPLUNK_DB/security/colddb
+            thawedPath: $SPLUNK_DB/security/thaweddb
