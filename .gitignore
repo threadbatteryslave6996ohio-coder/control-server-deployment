@@ -1,5 +1,9 @@
 .env
 prometheus/targets/*.local.yml
+# Generated per environment by the Ansible control-plane play from the
+# inventory. Only the .example template belongs in git -- a tracked copy would
+# dirty the checkout on every run and break `git pull --ff-only`.
+prometheus/targets/managed-hosts.yml
 grafana-data/
 prometheus-data/
 loki-data/

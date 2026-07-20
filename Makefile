@@ -4,15 +4,14 @@ ENV_FILE ?= .env
 TARGETS_DIR ?= prometheus/targets
 TARGETS_FILE ?= $(TARGETS_DIR)/managed-hosts.yml
 
-.PHONY: help init bootstrap up up-grafana down restart ps logs access-logs status config validate targets
+.PHONY: help init bootstrap up down restart ps logs access-logs status config validate targets
 
 help:
 	@printf '%s\n' \
 		'Available targets:' \
 		'  init          Prepare .env and the default Prometheus target file' \
 		'  bootstrap     Prepare local env and target files' \
-		'  up            Start Prometheus and Loki' \
-		'  up-grafana    Start Prometheus, Loki, and Grafana' \
+		'  up            Start the full stack' \
 		'  down          Stop the stack and remove containers' \
 		'  restart       Restart the stack' \
 		'  ps            Show running services' \
@@ -35,9 +34,6 @@ bootstrap:
 
 up:
 	$(COMPOSE) --project-name "$(STACK_NAME)" up -d
-
-up-grafana:
-	$(COMPOSE) --project-name "$(STACK_NAME)" --profile grafana up -d
 
 down:
 	$(COMPOSE) --project-name "$(STACK_NAME)" down
