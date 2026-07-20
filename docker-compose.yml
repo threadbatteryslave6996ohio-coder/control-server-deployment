@@ -51,8 +51,9 @@ services:
       SPLUNK_PASSWORD: ${SPLUNK_PASSWORD:?set SPLUNK_PASSWORD in .env}
       SPLUNK_HEC_TOKEN: ${SPLUNK_HEC_TOKEN:?set SPLUNK_HEC_TOKEN in .env}
       SPLUNK_HEC_PORT: ${SPLUNK_HEC_PORT:-8088}
-    ports:
-      - "${SPLUNK_BIND_ADDRESS:-0.0.0.0}:${SPLUNK_HEC_PORT:-8088}:8088"
+      SPLUNK_HEC_SSL: "False"
+    # No published ports: HEC and the web UI are reached through the proxy on
+    # the single ingress port. See README, "Single ingress".
     volumes:
       - splunk-data:/opt/splunk/var
     restart: unless-stopped
