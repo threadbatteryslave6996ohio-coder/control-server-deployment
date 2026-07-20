@@ -1,0 +1,25 @@
+groups:
+  - name: memory
+    rules:
+      # Usage excludes reclaimable page cache (MemAvailable), so this reflects
+      # memory that is genuinely unavailable rather than cache.
+      - record: instance:memory_used_percent
+        expr: 100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)
+
+      - alert: HighMemoryUsage
+        expr: instance:memory_used_percent{job="node-exporter"} > 90
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.host }} memory above 90%"
+          description: "{{ $labels.host }} ({{ $labels.instance }}) is at {{ $value | printf \"%.1f\" }}% memory for over 2m."
+
+      - alert: MemoryExporterDown
+        expr: up{job="node-exporter"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.host }} node-exporter unreachable"
+          description: "Prometheus cannot scrape {{ $labels.instance }}. The host may be down or OOM-killed."
