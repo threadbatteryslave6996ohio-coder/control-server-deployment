@@ -4,7 +4,10 @@ datasources:
   - name: Prometheus
     type: prometheus
     access: proxy
-    url: http://prometheus:9090
+    # Prometheus runs with --web.route-prefix=/prometheus, so its whole API is
+    # served under that prefix. Without it every query returns 404 and the
+    # dashboards render as "no data".
+    url: http://prometheus:9090/prometheus
     isDefault: true
     editable: false
 
